@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cipher of the Longest Light</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌞 THE CIPHER OF THE LONGEST LIGHT 🌙</h1>
+              <div id="apiStatus" style="text-align: center; font-size: 0.75rem; margin-top: 5px; padding: 4px; background: #1a1f2c; border-radius: 20px; display: inline-block; width: auto; margin-left: auto; margin-right: auto;">
+                🤖 Gemini: CARREGANDO...
+            </div>
+            <div class="solstice-info" id="solsticeInfo"></div>          
+        </header>
+
+        <div class="game-area">
+            <!-- Painel narrativo -->
+            <div class="narrative-panel" id="narrativePanel">
+                <p id="narrativeText">Carregando...</p>
+            </div>
+
+            <!-- Painel do puzzle atual -->
+            <div class="puzzle-panel" id="puzzlePanel">
+                <h2 id="puzzleTitle"></h2>
+                <p id="puzzleDescription"></p>
+                <div id="cipherInterface">
+                    <!-- interface do puzzle aparece aqui -->
+                </div>
+            </div>
+
+            <!-- Controle de luz (mecânica do solstício) -->
+            <div class="light-control">
+                <label>☀️ HORAS DE LUZ NO DIA ☀️</label>
+                <input type="range" id="lightSlider" min="0" max="24" value="12" step="0.5">
+                <span id="lightValue">12.0</span> horas
+                <p class="light-hint" id="lightHint"></p>
+            </div>
+
+            <!-- Feedback e botões -->
+            <div class="feedback" id="feedback"></div>
+            <div class="buttons">
+                <button id="submitBtn" disabled>🔓 VERIFICAR RESPOSTA</button>
+                <button id="nextBtn" style="display:none;">➡️ PRÓXIMA FASE</button>
+            </div>
+
+            <!-- Progresso -->
+            <div class="progress">
+                Fase <span id="phaseNum">1</span> / 2
+            </div>
+        </div>
+
+        <footer>
+            <p>🏳️‍🌈 Em homenagem a Alan Turing, Clementine (Juneteenth) e todas as vozes que brilham na escuridão.</p>
+            <p>🤖 Este jogo usou Google Gemini para gerar diálogos históricos.</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

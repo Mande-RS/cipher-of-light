@@ -1,0 +1,196 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #0a0f1e 0%, #1a1f2e 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: #eee;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+    background: rgba(0,0,0,0.7);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid #ffd966;
+    box-shadow: 0 0 30px rgba(255,217,102,0.2);
+}
+
+h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    color: #ffd966;
+    margin-bottom: 15px;
+}
+
+.solstice-info {
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 8px;
+    background: #2a2f3e;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.game-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.narrative-panel {
+    background: #0f1219;
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid #ff6b6b;
+    font-size: 1rem;
+    line-height: 1.5;
+    min-height: 120px;
+}
+
+.puzzle-panel {
+    background: #141824;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.light-control {
+    background: #1a1f2c;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.light-control label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #ffd966;
+}
+
+input[type="range"] {
+    width: 80%;
+    margin: 10px 0;
+    cursor: pointer;
+}
+
+.light-hint {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+.cipher-input {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+.cipher-input input {
+    flex: 1;
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    background: #0a0c12;
+    border: 1px solid #ffd966;
+    color: #fff;
+    border-radius: 8px;
+}
+
+.cipher-input button {
+    padding: 12px 20px;
+    background: #ffd966;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.cipher-input button:hover {
+    background: #ffc933;
+}
+
+.feedback {
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.feedback.success {
+    background: #1e4620;
+    color: #a5d6a5;
+}
+
+.feedback.error {
+    background: #5c1a1a;
+    color: #ffaaaa;
+}
+
+.buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+button {
+    padding: 12px 24px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#submitBtn {
+    background: #4a6fa5;
+    color: white;
+}
+
+#submitBtn:disabled {
+    background: #3a4a6a;
+    cursor: not-allowed;
+}
+
+#nextBtn {
+    background: #ffd966;
+    color: #1a1f2e;
+}
+
+.progress {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-top: 10px;
+}
+
+footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 0.7rem;
+    color: #777;
+    border-top: 1px solid #333;
+    padding-top: 15px;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+    h1 {
+        font-size: 1.2rem;
+    }
+}
