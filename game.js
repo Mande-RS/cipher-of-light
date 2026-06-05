@@ -1,6 +1,6 @@
 // ============================================
-// THE CIPHER OF THE LONGEST LIGHT - VERSÃO DEFINITIVA
-// Com proxy CORS para Gemini funcionar
+// THE CIPHER OF THE LONGEST LIGHT
+// Versão com proxy CORS - FUNCIONA NO GITHUB PAGES
 // ============================================
 
 let GEMINI_API_KEY = null;
@@ -10,23 +10,25 @@ let currentPuzzle = null;
 let canSubmit = false;
 let gameCompleted = false;
 
-// ---------- DADOS DOS PUZZLES ----------
+// Proxy CORS gratuito e confiável
+const CORS_PROXY = "https://corsproxy.io/?";
+
 const phase1 = {
     title: "🔐 A CARTA DE ALAN TURING",
-    description: "Você encontrou um bilhete cifrado no diário de Turing. Ele escreveu:\n\n\"Uif tpmtujdf jt nz pof ujnf pg mjhiu.\"\n\nTuring usava Cifra de César (deslocamento de 1 letra para trás). Decifre a mensagem.",
+    description: "Decifre: 'Uif tpmtujdf jt nz pof ujnf pg mjhiu.' (Cifra de César - voltar 1 letra)",
     encryptedText: "Uif tpmtujdf jt nz pof ujnf pg mjhiu.",
     correctAnswer: "the solstice is my one time of light",
-    hint: "Volte uma letra no alfabeto: U→T, i→h, f→e...",
+    hint: "U→T, i→h, f→e...",
     lightHintLong: "No dia mais longo, Turing escrevia à luz do sol.",
     lightHintShort: "No dia mais curto, as sombras guardavam segredos."
 };
 
 const phase2 = {
     title: "📜 A CARTA DE CLEMENTINE (Juneteenth)",
-    description: "Clementine deixou um código. Cada letra foi deslocada 3 posições (A→D, B→E...).\n\nMensagem: \"Iro vkh dqg ri wkh fkdlqv duh jrqh, exw iuhhgrp lv d vhhg.\"",
+    description: "Decifre: 'Iro vkh dqg ri wkh fkdlqv duh jrqh, exw iuhhgrp lv d vhhg.' (Deslocamento 3 para trás)",
     encryptedText: "Iro vkh dqg ri wkh fkdlqv duh jrqh, exw iuhhgrp lv d vhhg.",
     correctAnswer: "all the end of the chains are gone but freedom is a seed",
-    hint: "Deslocamento de 3 letras para trás (D→A, E→B).",
+    hint: "D→A, E→B, F→C...",
     lightHintLong: "A luz da verdade não pode ser apagada.",
     lightHintShort: "A escuridão me ensinou a ver estrelas."
 };
@@ -38,46 +40,112 @@ const narratives = {
     phase2_success: "🌟 Mensagem decifrada! A liberdade precisa ser plantada todos os dias."
 };
 
-// ---------- PROXY CORS GRATUITO (resolve o problema!) ----------
-// Usamos o CORS Anywhere para contornar bloqueios do navegador
-const CORS_PROXY = "https://cors-anywhere.herokuapp.com/";
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+// ---------- CHAMAR GEMINI VIA PROXY ----------
+async function callGemini(promptText) {
+    if (!USE_GEMINI || !GEMINI_API_KEY) return null;
+    
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    
+    const requestBody = {
+        contents: [{
+            parts: [{
+                text: promptText + " Responda em português brasileiro, tom poético, máximo 2 frases curtas."
+            }]
+        }],
+        generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 100,
+        }
+    };
+    
+    try {
+        console.log("Chamando Gemini via proxy...");
+        
+        const response = await fetch(CORS_PROXY + encodeURIComponent(apiUrl), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            console.error("Erro HTTP:", response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        console.log("Gemini respondeu:", generatedText);
+        return generatedText || null;
+        
+    } catch (error) {
+        console.error("Erro:", error);
+        return null;
+    }
+}
+
+// ---------- GERAR DICA ----------
+async function generateDynamicHint() {
+    const hintDiv = document.getElementById('dynamicHint');
+    const loadingSpan = document.getElementById('geminiLoading');
+    
+    if (!USE_GEMINI || !GEMINI_API_KEY) {
+        hintDiv.innerHTML = `💡 <strong>Gemini não está conectado.</strong><br>
+        Clique no status "🤖 Gemini: clique para conectar" no topo da tela.<br>
+        Depois de conectar, clique novamente neste botão.`;
+        return;
+    }
+    
+    loadingSpan.style.display = 'inline';
+    hintDiv.innerHTML = "🤖 Gemini está pensando... ⏳";
+    
+    let prompt = currentPhase === 1 
+        ? "Dê uma dica curta e poética para decifrar uma Cifra de César (voltar 1 letra). A frase cifrada começa com 'Uif tpmtujdf'. Fale como Alan Turing, cientista gay que amava o solstício."
+        : "Dê uma dica curta e poética para decifrar uma cifra de deslocamento 3 (voltar 3 letras). A frase cifrada começa com 'Iro vkh'. Fale como Clementine, uma mulher negra ex-escravizada que celebra Juneteenth.";
+    
+    const geminiHint = await callGemini(prompt);
+    loadingSpan.style.display = 'none';
+    
+    if (geminiHint) {
+        hintDiv.innerHTML = `✨ <strong>DICA GERADA POR GEMINI</strong> ✨<br><br>"${geminiHint}"`;
+        hintDiv.style.animation = 'glow 0.5s ease';
+        setTimeout(() => { hintDiv.style.animation = ''; }, 500);
+    } else {
+        hintDiv.innerHTML = `💡 <strong>Dica padrão:</strong> ${currentPhase === 1 ? phase1.hint : phase2.hint}<br><br>
+        ⚠️ O proxy pode estar ocupado. Tente novamente ou use o navegador Firefox.<br>
+        📝 <strong>Para a submissão da jam:</strong> anexe prints do Google AI Studio como prova.`;
+    }
+}
 
 // ---------- TESTAR CHAVE API ----------
 async function testGeminiKey(key) {
     const testUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
     try {
-        const response = await fetch(testUrl);
-        if (response.ok) {
-            return true;
-        } else {
-            const error = await response.json();
-            console.error("Erro na chave:", error);
-            return false;
-        }
+        const response = await fetch(CORS_PROXY + encodeURIComponent(testUrl));
+        return response.ok;
     } catch (error) {
-        console.error("Erro de rede:", error);
         return false;
     }
 }
 
-// ---------- CONFIGURAR CHAVE API ----------
+// ---------- CONFIGURAR CHAVE ----------
 async function configureApiKey() {
     const statusDiv = document.getElementById('apiStatus');
     statusDiv.innerHTML = '🤖 Gemini: testando chave...';
     
     const key = prompt(
-        "🔑 COLOQUE SUA CHAVE DA API DO GEMINI:\n\n" +
+        "🔑 SUA CHAVE DA API DO GEMINI\n\n" +
         "1. Acesse https://aistudio.google.com/\n" +
-        "2. Clique em 'Get API key'\n" +
-        "3. Crie uma chave e copie\n\n" +
-        "Cole aqui:"
+        "2. Faça login com sua conta Google\n" +
+        "3. Clique em 'Get API key'\n" +
+        "4. Crie uma chave e copie\n\n" +
+        "Cole a chave aqui:"
     );
     
     if (!key || key.length < 10) {
-        statusDiv.innerHTML = '🤖 Gemini: DESLIGADO (sem chave)';
+        statusDiv.innerHTML = '🤖 Gemini: clique para conectar';
         USE_GEMINI = false;
-        GEMINI_API_KEY = null;
         return false;
     }
     
@@ -87,15 +155,12 @@ async function configureApiKey() {
         USE_GEMINI = true;
         localStorage.setItem('gemini_api_key', key);
         statusDiv.innerHTML = '🤖 Gemini: CONECTADO ✓';
-        
-        // Mostrar alerta sobre o proxy CORS
-        alert("✅ Gemini conectado!\n\nNota: Usamos um proxy CORS gratuito. Se aparecer uma mensagem do proxy, clique em 'Request temporary access' e recarregue a página.");
-        
+        alert("✅ Conectado! Agora clique em 'PEDIR DICA AO GEMINI'");
         return true;
     } else {
-        statusDiv.innerHTML = '🤖 Gemini: CHAVE INVÁLIDA! Clique para tentar novamente.';
+        statusDiv.innerHTML = '🤖 Gemini: chave inválida - clique para tentar';
         USE_GEMINI = false;
-        GEMINI_API_KEY = null;
+        alert("❌ Chave inválida. Verifique se copiou corretamente.");
         return false;
     }
 }
@@ -112,160 +177,10 @@ async function loadSavedKey() {
             return true;
         } else {
             localStorage.removeItem('gemini_api_key');
-            document.getElementById('apiStatus').innerHTML = '🤖 Gemini: clique para conectar';
-            return false;
         }
-    } else {
-        document.getElementById('apiStatus').innerHTML = '🤖 Gemini: clique para conectar';
-        return false;
     }
-}
-
-// ---------- CHAMAR GEMINI API COM PROXY CORS ----------
-async function callGemini(promptText, context = "") {
-    if (!USE_GEMINI || !GEMINI_API_KEY) {
-        console.log("Gemini não disponível");
-        return null;
-    }
-    
-    const fullPrompt = context + "\n\n" + promptText + "\n\nResponda em português brasileiro, tom poético, máximo 3 frases curtas.";
-    
-    const requestBody = {
-        contents: [{
-            parts: [{
-                text: fullPrompt
-            }]
-        }],
-        generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 100,
-        }
-    };
-    
-    // URL completa com chave
-    const url = `${GEMINI_URL}?key=${GEMINI_API_KEY}`;
-    
-    // Tentativa 1: Sem proxy (pode falhar por CORS)
-    // Tentativa 2: Com proxy (se falhar)
-    
-    try {
-        console.log("Chamando Gemini API via proxy...");
-        
-        // Usar proxy CORS
-        const proxyUrl = CORS_PROXY + url;
-        
-        const response = await fetch(proxyUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Erro HTTP:", response.status, errorText);
-            
-            // Se for erro 403 ou 401, chave inválida
-            if (response.status === 403 || response.status === 401) {
-                localStorage.removeItem('gemini_api_key');
-                USE_GEMINI = false;
-                GEMINI_API_KEY = null;
-                document.getElementById('apiStatus').innerHTML = '🤖 Gemini: chave expirada, clique para reconectar';
-            }
-            
-            // Se for erro de CORS do proxy, tentar sem proxy
-            if (response.status === 503 || errorText.includes('cors')) {
-                console.log("Proxy falhou, tentando sem proxy...");
-                return await callGeminiDirect(url, requestBody);
-            }
-            
-            return null;
-        }
-        
-        const data = await response.json();
-        console.log("Gemini respondeu:", data);
-        
-        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        return generatedText || null;
-        
-    } catch (error) {
-        console.error("Erro na chamada Gemini via proxy:", error);
-        
-        // Tentar sem proxy como fallback
-        return await callGeminiDirect(url, requestBody);
-    }
-}
-
-// ---------- CHAMADA DIRETA (SEM PROXY) ----------
-async function callGeminiDirect(url, requestBody) {
-    try {
-        console.log("Tentando chamada direta (sem proxy)...");
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-            console.error("Erro direto:", response.status);
-            return null;
-        }
-        
-        const data = await response.json();
-        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        return generatedText || null;
-        
-    } catch (error) {
-        console.error("Ambas tentativas falharam. CORS pode estar bloqueando.");
-        console.log("💡 Dica: Instale a extensão 'Allow CORS' no Chrome ou use Firefox.");
-        return null;
-    }
-}
-
-// ---------- GERAR DICA DINÂMICA ----------
-async function generateDynamicHint() {
-    const hintDiv = document.getElementById('dynamicHint');
-    const loadingSpan = document.getElementById('geminiLoading');
-    
-    if (!USE_GEMINI || !GEMINI_API_KEY) {
-        hintDiv.innerHTML = "💡 <strong>Gemini não está conectado.</strong> Clique no status 'Gemini: clique para conectar' no topo da tela.";
-        return;
-    }
-    
-    loadingSpan.style.display = 'inline';
-    hintDiv.innerHTML = "🤖 Gemini está pensando... ⏳";
-    
-    let prompt = "";
-    let context = "";
-    
-    if (currentPhase === 1) {
-        prompt = `Dê uma dica curta e poética (máximo 2 linhas) para decifrar uma Cifra de César onde cada letra volta 1 posição. A frase cifrada começa com "Uif tpmtujdf". Fale como Alan Turing.`;
-        context = "Você é Alan Turing, cientista gay britânico. Use metáfora sobre solstício.";
-    } else {
-        prompt = `Dê uma dica curta e poética (máximo 2 linhas) para decifrar uma cifra onde cada letra volta 3 posições. A frase cifrada começa com "Iro vkh". Fale como Clementine, uma mulher negra ex-escravizada.`;
-        context = "Você é Clementine. Use metáfora sobre liberdade e sementes.";
-    }
-    
-    const geminiHint = await callGemini(prompt, context);
-    loadingSpan.style.display = 'none';
-    
-    if (geminiHint) {
-        hintDiv.innerHTML = `✨ <strong>DICA GERADA POR GEMINI</strong> ✨<br><br>"${geminiHint}"`;
-        hintDiv.style.animation = 'glow 0.5s ease';
-        setTimeout(() => { hintDiv.style.animation = ''; }, 500);
-    } else {
-        hintDiv.innerHTML = `💡 <strong>Dica padrão:</strong> ${currentPhase === 1 ? phase1.hint : phase2.hint}<br><br>
-        ⚠️ Gemini não respondeu. Isso pode acontecer por CORS (política do navegador).<br>
-        🔧 <strong>Solução rápida:</strong> 
-        <ul style="margin:8px 0 0 20px;">
-        <li>Use o navegador <strong>Firefox</strong> (mais permissivo com CORS)</li>
-        <li>Ou instale a extensão "Allow CORS" no Chrome</li>
-        <li>Ou abra o jogo em <strong>localhost</strong> ao invés de arquivo direto</li>
-        </ul>`;
-    }
+    document.getElementById('apiStatus').innerHTML = '🤖 Gemini: clique para conectar';
+    return false;
 }
 
 // ---------- MECÂNICA DE LUZ ----------
@@ -273,41 +188,35 @@ function updateLightMechanics() {
     const slider = document.getElementById('lightSlider');
     const lightHours = parseFloat(slider.value);
     document.getElementById('lightValue').textContent = lightHours.toFixed(1);
-    
     const solsticeInfo = document.getElementById('solsticeInfo');
     const lightHintSpan = document.getElementById('lightHint');
     
     if (lightHours > 18) {
-        solsticeInfo.innerHTML = "🌍 HEMISFÉRIO NORTE - SOLSTÍCIO DE VERÃO ☀️<br>O dia mais longo do ano.";
+        solsticeInfo.innerHTML = "🌍 HEMISFÉRIO NORTE - SOLSTÍCIO DE VERÃO ☀️<br>O dia mais longo do ano. A luz abundante revela sombras do passado.";
         lightHintSpan.textContent = currentPhase === 1 ? phase1.lightHintLong : phase2.lightHintLong;
         canSubmit = true;
-    } 
-    else if (lightHours < 6) {
-        solsticeInfo.innerHTML = "🌍 HEMISFÉRIO SUL - SOLSTÍCIO DE INVERNO 🌙<br>O dia mais curto.";
+    } else if (lightHours < 6) {
+        solsticeInfo.innerHTML = "🌍 HEMISFÉRIO SUL - SOLSTÍCIO DE INVERNO 🌙<br>O dia mais curto. A escuridão guarda segredos.";
         lightHintSpan.textContent = currentPhase === 1 ? phase1.lightHintShort : phase2.lightHintShort;
         canSubmit = true;
-    }
-    else {
-        solsticeInfo.innerHTML = "🌍 ENTRE SOLSTÍCIOS — Ajuste para >18h (Norte) ou <6h (Sul)";
-        lightHintSpan.textContent = "⚡ Mova para o extremo para decifrar.";
+    } else {
+        solsticeInfo.innerHTML = "🌍 ENTRE SOLSTÍCIOS — Ajuste o slider para >18h (Norte) ou <6h (Sul)";
+        lightHintSpan.textContent = "⚡ O solstício é necessário para decifrar.";
         canSubmit = false;
     }
-    
     document.getElementById('submitBtn').disabled = !canSubmit;
 }
 
-// ---------- DECODIFICAÇÃO ----------
+// ---------- VERIFICAR RESPOSTA ----------
 function checkAnswer() {
     if (!canSubmit && !gameCompleted) {
         document.getElementById('feedback').innerHTML = '<div class="feedback error">⚠️ Mova para o solstício (>18h ou <6h).</div>';
         return;
     }
     
-    const answerInput = document.getElementById('cipherAnswer');
-    const userAnswer = answerInput.value.trim().toLowerCase();
-    const correct = currentPuzzle.correctAnswer;
+    const userAnswer = document.getElementById('cipherAnswer').value.trim().toLowerCase();
     
-    if (userAnswer === correct) {
+    if (userAnswer === currentPuzzle.correctAnswer) {
         document.getElementById('feedback').innerHTML = '<div class="feedback success">✅ CORRETO!</div>';
         
         if (currentPhase === 1) {
@@ -316,48 +225,35 @@ function checkAnswer() {
             document.getElementById('phaseNum').textContent = "2";
             document.getElementById('submitBtn').style.display = "none";
             document.getElementById('nextBtn').style.display = "inline-block";
-            
-            const nextBtn = document.getElementById('nextBtn');
-            nextBtn.onclick = () => {
-                renderPuzzle();
-                document.getElementById('feedback').innerHTML = '';
-                document.getElementById('submitBtn').style.display = "inline-block";
-                document.getElementById('nextBtn').style.display = "none";
-                document.getElementById('cipherAnswer').value = '';
-                updateLightMechanics();
-            };
-        } 
-        else if (currentPhase === 2) {
+            document.getElementById('nextBtn').onclick = () => { renderPuzzle(); resetPhase(); };
+        } else {
             document.getElementById('narrativeText').innerHTML = narratives.phase2_success + "\n\n🏆 PARABÉNS! Você honrou Turing, Juneteenth e o solstício. 🌈";
             document.getElementById('puzzlePanel').style.display = "none";
             document.getElementById('submitBtn').style.display = "none";
             document.getElementById('nextBtn').style.display = "none";
             document.getElementById('lightSlider').disabled = true;
             gameCompleted = true;
-            document.getElementById('feedback').innerHTML = '<div class="feedback success">🏆 VITÓRIA!</div>';
         }
-    } 
-    else {
-        document.getElementById('feedback').innerHTML = '<div class="feedback error">❌ Incorreto. Use a dica do Gemini ou veja a dica padrão.</div>';
+    } else {
+        document.getElementById('feedback').innerHTML = '<div class="feedback error">❌ Incorreto. Tente novamente!</div>';
     }
 }
 
+function resetPhase() {
+    document.getElementById('feedback').innerHTML = '';
+    document.getElementById('submitBtn').style.display = "inline-block";
+    document.getElementById('nextBtn').style.display = "none";
+    document.getElementById('cipherAnswer').value = '';
+    updateLightMechanics();
+}
+
 function renderPuzzle() {
-    const puzzleTitle = document.getElementById('puzzleTitle');
-    const puzzleDesc = document.getElementById('puzzleDescription');
-    const cipherInterface = document.getElementById('cipherInterface');
+    currentPuzzle = currentPhase === 1 ? phase1 : phase2;
+    document.getElementById('puzzleTitle').textContent = currentPuzzle.title;
+    document.getElementById('puzzleDescription').innerHTML = currentPuzzle.description;
+    document.getElementById('narrativeText').innerHTML = currentPhase === 1 ? narratives.phase1_intro : narratives.phase2_intro;
     
-    if (currentPhase === 1) {
-        currentPuzzle = phase1;
-        puzzleTitle.textContent = phase1.title;
-        puzzleDesc.innerHTML = phase1.description;
-    } else {
-        currentPuzzle = phase2;
-        puzzleTitle.textContent = phase2.title;
-        puzzleDesc.innerHTML = phase2.description;
-    }
-    
-    cipherInterface.innerHTML = `
+    document.getElementById('cipherInterface').innerHTML = `
         <div class="cipher-input">
             <input type="text" id="cipherAnswer" placeholder="Digite a mensagem decifrada (minúsculas)..." style="flex:2;">
             <button id="checkAnswerBtn">🔍 VERIFICAR</button>
@@ -374,12 +270,11 @@ function renderPuzzle() {
         document.getElementById('checkAnswerBtn')?.addEventListener('click', checkAnswer);
         document.getElementById('geminiHintBtn')?.addEventListener('click', generateDynamicHint);
     }, 50);
-    
     updateLightMechanics();
 }
 
 // ---------- INICIALIZAÇÃO ----------
-async function initGame() {
+window.onload = async () => {
     await loadSavedKey();
     
     const statusDiv = document.getElementById('apiStatus');
@@ -387,14 +282,11 @@ async function initGame() {
     statusDiv.onclick = configureApiKey;
     
     renderPuzzle();
-    
     document.getElementById('lightSlider').addEventListener('input', updateLightMechanics);
-    document.getElementById('submitBtn').addEventListener('click', () => {
-        document.getElementById('checkAnswerBtn')?.click();
-    });
-}
+    document.getElementById('submitBtn').addEventListener('click', () => document.getElementById('checkAnswerBtn')?.click());
+};
 
-// CSS
+// CSS para animação
 const style = document.createElement('style');
 style.textContent = `
     @keyframes glow {
@@ -404,5 +296,3 @@ style.textContent = `
     #apiStatus:hover { background: #2a2f3e; }
 `;
 document.head.appendChild(style);
-
-window.onload = initGame;
